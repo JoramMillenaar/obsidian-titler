@@ -8,7 +8,7 @@ import { excludedFolders, isInFolders } from "./obsidian/excludedFolders";
 import { isTitleFocused } from "./obsidian/titleElements";
 import { untitledNames } from "./obsidian/untitledNames";
 import { DeviceSettingsRepository, SettingsRepository, StatusReporter } from "./ports";
-import { AUTO_TITLE_PAUSE_MS, GENERATION_MODELS, IDLE_UNLOAD_MS, MODEL_CACHE_KEY } from "./constants";
+import { AUTO_TITLE_PAUSE_MS, GENERATION_MODELS, MODEL_CACHE_KEY } from "./constants";
 import { TitleFormat } from "./types";
 import { GenerationEngine } from "./generation/engine";
 import { deleteModelDownload, isModelDownloaded } from "./generation/modelCache";
@@ -48,7 +48,7 @@ export class AppContainer {
 			isForceWasm: () => this.deviceSettingsRepo.get().forceWasm,
 			isDownloaded: (config) => isModelDownloaded(config, MODEL_CACHE_KEY),
 			cacheKey: MODEL_CACHE_KEY,
-			idleMs: IDLE_UNLOAD_MS,
+			idleMs: () => this.deviceSettingsRepo.get().unloadAfterSeconds * 1000,
 			onUnusableGpuOutput: () => {
 				// Some GPUs overflow in fp16 and produce garbage: the CPU is slower but reliable.
 				this.deviceSettingsRepo.updatePartial({forceWasm: true});
@@ -107,6 +107,12 @@ export class AppContainer {
 		this.deviceSettingsRepo.updatePartial({modelDisabled: disabled});
 		if (disabled) this.engine.disable();
 		else this.engine.enable();
+	}
+
+	/** Sets how long the model stays loaded after use, on this device only. A model loaded now counts down from here. */
+	setUnloadAfterSeconds(seconds: number): void {
+		this.deviceSettingsRepo.updatePartial({unloadAfterSeconds: seconds});
+		this.engine.idleTimeChanged();
 	}
 
 	/** Frees the model's disk space on this device; the next use downloads it again. */

@@ -16,8 +16,8 @@ export const MODEL_CACHE_KEY = "titler-models";
 /** Download progress for files smaller than this (configs, tokenizers) is not worth showing. */
 export const MIN_DOWNLOAD_PROGRESS_BYTES = 1_000_000;
 
-/** How long the model stays in memory after it was last used. Unloading terminates its worker. */
-export const IDLE_UNLOAD_MS = 10 * 60 * 1000;
+/** The longest the model may stay in memory after it was last used: a day. Unloading terminates its worker. */
+export const MAX_UNLOAD_AFTER_SECONDS = 24 * 60 * 60;
 
 /** How many titles one generation asks for. */
 export const TITLE_COUNT = 3;
@@ -90,6 +90,7 @@ export const DEFAULT_SETTINGS: TitlerSettings = {
 export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
 	modelDisabled: false,
 	forceWasm: false,
+	unloadAfterSeconds: 10 * 60,
 };
 
 export const DEVICE_SETTINGS_STORAGE_KEY = "titler:device-settings";

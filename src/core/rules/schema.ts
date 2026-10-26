@@ -3,6 +3,7 @@ import {
 	DEFAULT_DEVICE_SETTINGS,
 	DEFAULT_SETTINGS,
 	GENERATION_MODELS,
+	MAX_UNLOAD_AFTER_SECONDS,
 	TITLE_CASINGS,
 	TITLE_LENGTHS,
 	TITLE_STYLES,
@@ -47,6 +48,8 @@ export function normalizePluginData(
 export function normalizeDeviceSettings(
 	value: Partial<DeviceSettings> | null | undefined,
 ): DeviceSettings {
+	const unloadAfterSeconds = value?.unloadAfterSeconds;
+
 	return {
 		modelDisabled: typeof value?.modelDisabled === "boolean"
 			? value.modelDisabled
@@ -54,5 +57,8 @@ export function normalizeDeviceSettings(
 		forceWasm: typeof value?.forceWasm === "boolean"
 			? value.forceWasm
 			: DEFAULT_DEVICE_SETTINGS.forceWasm,
+		unloadAfterSeconds: typeof unloadAfterSeconds === "number" && Number.isFinite(unloadAfterSeconds) && unloadAfterSeconds >= 0
+			? Math.min(MAX_UNLOAD_AFTER_SECONDS, Math.round(unloadAfterSeconds))
+			: DEFAULT_DEVICE_SETTINGS.unloadAfterSeconds,
 	};
 }

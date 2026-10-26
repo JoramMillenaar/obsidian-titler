@@ -65,6 +65,8 @@ export interface DeviceSettings {
 	modelDisabled: boolean;
 	/** Set when WebGPU produced unusable output on this device: the CPU backend is used instead. */
 	forceWasm: boolean;
+	/** How long the model stays in memory after it was last used. 0 unloads it as soon as it's done. */
+	unloadAfterSeconds: number;
 }
 
 export interface TitlerPluginData {

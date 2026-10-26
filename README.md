@@ -18,9 +18,9 @@ Titles for your Obsidian notes, written by a small AI that runs entirely on your
 - **Style**: a topic ("Sourdough starter care"), a claim ("Starters need daily feeding at room
   temperature") or a question ("How often should I feed a starter").
 
-Under **Advanced** you can turn the AI off on one device, change how much you need to have
-written before a note is named, add names of your own that count as untitled, and delete the
-downloaded model.
+Under **Advanced** you can turn the AI off on one device, choose how long the model stays in
+memory after use on that device, change how much you need to have written before a note is
+named, add names of your own that count as untitled, and delete the downloaded model.
 
 ## Privacy and network use
 
@@ -42,7 +42,8 @@ your browser, which you can read and edit before sending; it never includes your
 
 - Obsidian 1.13 or later, on desktop. The model is too large for phones and tablets.
 - About 1.5 GB of disk space for the model, and as much memory while it's loaded. It unloads
-  after 10 minutes without use and reloads in a few seconds when needed.
+  after 10 minutes without use (adjustable under **Advanced**) and reloads in a few seconds when
+  needed.
 - A GPU with WebGPU support makes a title take about a second. Without one, the plugin runs on the
   CPU, which works but is noticeably slower.
 

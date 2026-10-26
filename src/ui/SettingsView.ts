@@ -1,12 +1,15 @@
 import { App, Notice, Plugin, PluginSettingTab, SettingDefinitionItem } from "obsidian";
 import { AppContainer } from "../appContainer";
-import { REPO_URL, TITLE_CASINGS, TITLE_LENGTHS, TITLE_STYLES } from "../constants";
+import { MAX_UNLOAD_AFTER_SECONDS, REPO_URL, TITLE_CASINGS, TITLE_LENGTHS, TITLE_STYLES } from "../constants";
 import { TitleStyle, TitlerSettings } from "../types";
 import { feedbackIssueUrl, FeedbackKind } from "../core/feedback";
 import { formatBytes, settingsStatusText } from "../status/modelMessages";
 
-/** Keys the declarative controls read and write; the untitled names are a list stored as one line of text. */
-type ControlKey = "autoTitle" | "casing" | "length" | "minWords" | "extraUntitledNames" | "advancedOpen";
+/**
+ * Keys the declarative controls read and write; the untitled names are a list stored as one line of
+ * text, and the unload delay is a device setting.
+ */
+type ControlKey = "autoTitle" | "casing" | "length" | "minWords" | "extraUntitledNames" | "advancedOpen" | "unloadAfterSeconds";
 
 const MIN_WORDS_FLOOR = 5;
 
@@ -132,6 +135,17 @@ export class SettingsView extends PluginSettingTab {
 						},
 					},
 					{
+						name: "Seconds before unloading the model",
+						desc: "How long the model stays in memory on this device after it was last used (this setting isn't synced). Lower frees memory sooner; higher keeps the next suggestions quick. 0 unloads it as soon as it's done.",
+						control: {
+							type: "number",
+							key: "unloadAfterSeconds",
+							min: 0,
+							max: MAX_UNLOAD_AFTER_SECONDS,
+							validate: (value) => (value >= 0 && value <= MAX_UNLOAD_AFTER_SECONDS ? undefined : `Use 0 to ${MAX_UNLOAD_AFTER_SECONDS} seconds (a day).`),
+						},
+					},
+					{
 						name: "Words before naming automatically",
 						desc: "How much you need to have written in an Untitled note before it gets a title.",
 						control: {
@@ -169,10 +183,15 @@ export class SettingsView extends PluginSettingTab {
 		const settings = this.container.settingsRepo.get();
 		if (key === "extraUntitledNames") return settings.extraUntitledNames.join(", ");
 		if (key === "advancedOpen") return settings.advancedOpen || this.isModelDisabled();
-		return settings[key as Exclude<ControlKey, "extraUntitledNames">];
+		if (key === "unloadAfterSeconds") return this.container.deviceSettingsRepo.get().unloadAfterSeconds;
+		return settings[key as Exclude<ControlKey, "extraUntitledNames" | "unloadAfterSeconds">];
 	}
 
 	async setControlValue(key: string, value: unknown): Promise<void> {
+		if (key === "unloadAfterSeconds") {
+			this.container.setUnloadAfterSeconds(Math.min(MAX_UNLOAD_AFTER_SECONDS, Math.max(0, Math.round(Number(value)))));
+			return;
+		}
 		const patch: Partial<TitlerSettings> = key === "extraUntitledNames"
 			? {extraUntitledNames: String(value).split(",").map((name) => name.trim()).filter(Boolean)}
 			: {[key]: key === "minWords" ? Math.max(MIN_WORDS_FLOOR, Math.round(Number(value))) : value};

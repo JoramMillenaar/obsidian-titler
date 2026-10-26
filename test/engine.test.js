@@ -101,7 +101,7 @@ function workingModel(message, worker, {text = "1. A\n2. B\n3. C", device = "web
 	}
 }
 
-function makeEngine({behaviour = workingModel, downloaded = true, onUnusableGpuOutput} = {}) {
+function makeEngine({behaviour = workingModel, downloaded = true, onUnusableGpuOutput, idleMs = () => IDLE_MS} = {}) {
 	const workers = [];
 	const engine = new GenerationEngine({
 		getConfig: () => CONFIG,
@@ -114,7 +114,7 @@ function makeEngine({behaviour = workingModel, downloaded = true, onUnusableGpuO
 		isForceWasm: () => false,
 		isDownloaded: async () => downloaded,
 		cacheKey: "test-cache",
-		idleMs: IDLE_MS,
+		idleMs,
 		onUnusableGpuOutput,
 	});
 	return {engine, workers};
@@ -162,6 +162,40 @@ test("a held lease keeps the model loaded past the idle time", async () => {
 	lease.release();
 	await clock.advance(IDLE_MS);
 	assert.strictEqual(workers[0].terminated, true);
+	engine.dispose();
+});
+
+test("a changed idle time restarts the countdown of an idle model, and leaves a model in use alone", async () => {
+	let idleMs = IDLE_MS;
+	const {engine, workers} = makeEngine({idleMs: () => idleMs});
+	await engine.generate(REQUEST, {lane: "background"});
+
+	await clock.advance(IDLE_MS / 2);
+	idleMs = 1000;
+	engine.idleTimeChanged();
+	await clock.advance(999);
+	assert.strictEqual(workers[0].terminated, false);
+	await clock.advance(1);
+	assert.strictEqual(workers[0].terminated, true, "the new idle time counts from the change");
+
+	const lease = engine.acquire();
+	await engine.whenSettled();
+	engine.idleTimeChanged();
+	await clock.advance(idleMs * 3);
+	assert.strictEqual(workers[1].terminated, false, "a held lease still keeps it loaded");
+	lease.release();
+	engine.dispose();
+});
+
+test("with no idle time the model unloads as soon as it's done, and prewarming leaves it unloaded", async () => {
+	const {engine, workers} = makeEngine({idleMs: () => 0});
+	await engine.generate(REQUEST, {lane: "background"});
+	assert.strictEqual(workers[0].terminated, false);
+	await clock.advance(0);
+	assert.strictEqual(workers[0].terminated, true);
+
+	await engine.prewarm();
+	assert.strictEqual(workers.length, 1, "prewarming would load the model only to unload it");
 	engine.dispose();
 });
 

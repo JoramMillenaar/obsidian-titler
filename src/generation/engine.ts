@@ -35,8 +35,8 @@ export type GenerationEngineDeps = {
 	/** Whether the model's weights are on this device already, so loading it won't download anything. */
 	isDownloaded: (config: GenerationModelConfig) => Promise<boolean>;
 	cacheKey: string;
-	/** How long the model stays loaded after its last lease is released. */
-	idleMs: number;
+	/** How long the model stays loaded after its last lease is released, read each time that countdown starts. */
+	idleMs: () => number;
 	/** Called when WebGPU output looked broken twice in a row: the caller decides whether to switch to WASM. */
 	onUnusableGpuOutput?: () => void;
 };
@@ -164,14 +164,22 @@ export class GenerationEngine {
 		};
 	}
 
-	/** Loads the model ahead of use when that won't start a download; the idle countdown then applies. */
+	/**
+	 * Loads the model ahead of use when that won't start a download; the idle countdown then applies.
+	 * With no idle time it would unload again as soon as it loaded, so then it doesn't.
+	 */
 	async prewarm(): Promise<void> {
 		if (this.state.kind !== "unloaded") {
 			if (this.state.kind === "ready" && this.leases === 0) this.scheduleTeardown();
 			return;
 		}
-		if (!(await this.isDownloaded())) return;
+		if (this.deps.idleMs() === 0 || !(await this.isDownloaded())) return;
 		this.acquire().release();
+	}
+
+	/** Restarts the idle countdown if one is running, so a changed idle time applies to the model loaded now. */
+	idleTimeChanged(): void {
+		if (this.idleTimer !== null) this.scheduleTeardown();
 	}
 
 	/** Resolves once the model is no longer loading (ready, failed, or disabled). */
@@ -429,7 +437,7 @@ export class GenerationEngine {
 		this.idleTimer = window.setTimeout(() => {
 			this.idleTimer = null;
 			this.teardown();
-		}, this.deps.idleMs);
+		}, this.deps.idleMs());
 	}
 
 	private cancelTeardown(): void {
