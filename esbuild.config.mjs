@@ -1,5 +1,7 @@
 import esbuild from 'esbuild';
 import process from 'process';
+import path from 'path';
+import { readFile } from 'fs/promises';
 import { builtinModules } from 'node:module';
 
 const banner = `/*
@@ -10,12 +12,56 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = process.argv[2] === 'production';
 
+// Obsidian's BrowserWindow sets `nodeIntegrationInWorker: true` (with `contextIsolation: false`),
+// so a Worker created here still gets a real Node `process` global, injected as a plain mutable
+// property. @huggingface/transformers treats `process.release.name === 'node'` as proof it's running
+// server-side and restricts itself to the `cpu` execution provider, hiding WebGPU/WASM in the process.
+// Stripping `process` from *this worker's own* global scope (nothing else runs in it) before any bundled
+// module evaluates makes the library detect a browser-like environment instead. It must run before the
+// bundle's module graph evaluates, so it's prepended as raw text rather than written in bootstrap.ts.
+const workerEnvironmentShim = `try { delete self.process; } catch (e) { try { self.process = undefined; } catch (e2) {} }\n`;
+
+/**
+ * Inlines the bundled model worker where workerScript.ts names `__WORKER_CONTENTS_PLACEHOLDER__`.
+ * The worker is bundled again on every build, and its sources are watched too: main.ts doesn't
+ * import them, so otherwise a dev watcher would keep inlining the worker it bundled at startup.
+ */
+const modelWorker = {
+	name: 'model-worker',
+	setup(build) {
+		build.onLoad({filter: /[\\/]src[\\/]workerScript\.ts$/}, async (args) => {
+			const worker = await esbuild.build({
+				entryPoints: ['src/generation/worker/bootstrap.ts'],
+				bundle: true,
+				platform: 'browser',
+				format: 'iife',
+				target: 'esnext',
+				write: false,
+				minify: prod,
+				metafile: true,
+			});
+			const workerCode = JSON.stringify(workerEnvironmentShim + worker.outputFiles[0].text);
+			const source = await readFile(args.path, 'utf8');
+			return {
+				contents: source.replaceAll('__WORKER_CONTENTS_PLACEHOLDER__', () => workerCode),
+				loader: 'ts',
+				watchFiles: Object.keys(worker.metafile.inputs).map((input) => path.resolve(input)),
+			};
+		});
+	},
+};
+
+// Local-only dev tooling (src/dev, gitignored): wraps the entry point and adds its defines in dev builds.
+const devHookPath = path.resolve('src/dev/build.mjs');
+const devHook = !prod && await readFile(devHookPath).then(() => import(devHookPath), () => null);
+
 const context = await esbuild.context({
 	banner: {
 		js: banner,
 	},
-	entryPoints: ['src/main.ts'],
+	entryPoints: [devHook?.entryPoint ?? 'src/main.ts'],
 	bundle: true,
+	platform: 'node',
 	external: [
 		'obsidian',
 		'electron',
@@ -39,6 +85,11 @@ const context = await esbuild.context({
 	treeShaking: true,
 	outfile: 'main.js',
 	minify: prod,
+	plugins: [modelWorker],
+	define: {
+		__DEV__: JSON.stringify(!prod), // Dev-only features; folds to `false` in production so they're tree-shaken out
+		...(devHook ? await devHook.defines(esbuild, workerEnvironmentShim) : {}),
+	},
 });
 
 if (prod) {

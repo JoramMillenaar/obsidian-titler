@@ -1,92 +1,65 @@
-# Obsidian Sample Plugin
+# Titler
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+Titles for your Obsidian notes, written by a small AI that runs entirely on your device.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+- **Suggestions when you select a title.** Click a note's title (or run **Suggest titles for this
+  note**) and three suggestions appear under it, next to one taken from the note's first heading or
+  line. Pick one to rename the note; links to it are updated as with any rename.
+- **Untitled notes name themselves.** Once you've written a few sentences in an "Untitled" note,
+  it gets a title when you pause typing or switch to another note. Each rename can be undone from
+  the notice that announces it, and a note you undo is left alone after that.
+- **In your note's language.** Titles come out in the language the note is written in.
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
+## Settings
 
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and outputs a Notice on click.
-- Registers a global interval which logs 'setInterval' to the console.
+- **Name untitled notes automatically**: on by default.
+- **Capitalization**: Sentence case, Title Case or lowercase.
+- **Length**: short (2–4 words), medium (4–8) or descriptive (up to 12).
+- **Style**: a topic ("Sourdough starter care"), a claim ("Starters need daily feeding at room
+  temperature") or a question ("How often should I feed a starter").
 
-## First time developing plugins?
+Under **Advanced** you can turn the AI off on one device, change how much you need to have
+written before a note is named, add names of your own that count as untitled, and delete the
+downloaded model.
 
-Quick starting guide for new plugin devs:
+## Privacy and network use
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `src/main.ts` to `main.js`.
-- Make changes to `src/main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+Your notes never leave your device: titles are generated locally, with no account, API key or
+external service.
 
-## Releasing new releases
+The plugin uses the network once, to download what it runs:
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+- the AI model ([Qwen3.5 2B](https://huggingface.co/onnx-community/Qwen3.5-2B-ONNX-OPT), about
+  1.4 GB) from **huggingface.co**, which starts when you enable the plugin (you can put it off from
+  the notice and start it later from the settings);
+- the ONNX Runtime files that run it, from **cdn.jsdelivr.net**.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+Both are stored in Obsidian's own storage on that device, shared by all your vaults, and work
+offline after that. There is no telemetry. **Report a bug** in the settings opens a GitHub issue in
+your browser, which you can read and edit before sending; it never includes your notes.
 
-## Adding your plugin to the community plugin list
+## Requirements
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+- Obsidian 1.13 or later, on desktop. The model is too large for phones and tablets.
+- About 1.5 GB of disk space for the model, and as much memory while it's loaded. It unloads
+  after 10 minutes without use and reloads in a few seconds when needed.
+- A GPU with WebGPU support makes a title take about a second. Without one, the plugin runs on the
+  CPU, which works but is noticeably slower.
 
-## How to use
+## Development
 
-- Clone this repo.
-- Make sure your NodeJS is at least v18 (`node --version`).
-- `npm i` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint
-
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-	"fundingUrl": "https://buymeacoffee.com"
-}
+```bash
+npm install
+npm run dev     # rebuilds main.js on change
+npm test        # unit tests (node:test)
+npm run lint
+npm run build   # production build
 ```
 
-If you have multiple URLs, you can also do:
+Copy or symlink `main.js`, `manifest.json` and `styles.css` into
+`<vault>/.obsidian/plugins/titler/` and enable the plugin. The model runs in a Web Worker
+(`src/generation/worker`), bundled into `main.js` by `esbuild.config.mjs`.
 
-```json
-{
-	"fundingUrl": {
-		"Buy Me a Coffee": "https://buymeacoffee.com",
-		"GitHub Sponsor": "https://github.com/sponsors",
-		"Patreon": "https://www.patreon.com/"
-	}
-}
-```
+## License
 
-## API Documentation
-
-See https://docs.obsidian.md
+The model, Qwen3.5 2B, is licensed under Apache 2.0.

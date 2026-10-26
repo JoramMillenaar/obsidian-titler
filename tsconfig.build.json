@@ -1,0 +1,12 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": false,
+		"outDir": "dist",
+		"module": "commonjs",
+		"skipLibCheck": true,
+		"inlineSourceMap": false,
+		"inlineSources": false
+	},
+	"exclude": ["src/dev/**"]
+}

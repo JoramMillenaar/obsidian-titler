@@ -20,3 +20,13 @@ data.json
 
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
+
+reference-obsidian-similarity
+TODO.md
+
+# Test build output (tsc -p tsconfig.build.json)
+dist
+
+# Dev-only tooling (model bench, dev commands): kept locally, never pushed
+src/dev/
+.claude

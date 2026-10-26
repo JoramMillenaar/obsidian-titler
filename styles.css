@@ -1,8 +1,32 @@
-/*
+/* Title suggestions, under a note's editable title */
+.titler-suggestion {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: var(--size-4-2);
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.titler-suggestion-hint {
+	flex-shrink: 0;
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+}
 
-If your plugin does not need CSS, delete this file.
+.titler-suggestion.is-pending {
+	color: var(--text-muted);
+}
 
-*/
+.titler-suggestion-pending {
+	font-style: italic;
+}
+
+.titler-suggestion-action {
+	color: var(--text-accent);
+}
+
+/* Buttons inside notices (Undo, Not now) */
+.titler-notice-undo,
+.titler-notice-button {
+	margin-inline-start: var(--size-4-2);
+	margin-top: var(--size-4-1);
+}
