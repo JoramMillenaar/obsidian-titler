@@ -8,11 +8,13 @@ const QUOTES = /^["'“”‘’«»„‚「」『』*_`]+|["'“”‘’«»�
 // Labels models put before a title. A colon inside a title ("Python: decorators") is kept.
 const LABEL = /^(title|titel|titre|título|titolo|option|suggestion)\s*\d*\s*[:：-]\s*/i;
 const EMOJI = /[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu;
-// Section headers models sometimes return as a "title", often lifted from the note's own template.
+// Section headers models sometimes return as a "title", often lifted from the note's own template,
+// and what they call a note they can't make sense of.
 const GENERIC_TITLES = new Set([
 	"note", "notes", "summary", "overview", "title", "titles", "idea", "ideas", "thoughts", "misc",
 	"untitled", "introduction", "conclusion", "sources", "references", "quotes", "brainstorm",
 	"description", "short description", "index", "draft", "todo", "tasks",
+	"empty", "empty note", "blank note", "new note", "untitled note", "no title", "no content", "note title",
 ]);
 
 /** One raw list item → a title candidate: markup, quotes, labels, emoji and end punctuation removed. */

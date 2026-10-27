@@ -50,6 +50,8 @@ const FORMAT = {casing: "sentence", length: "medium", style: "topic"};
 function setup({titles = ["Sourdough starter care", "Feeding schedule"], suggest, focused = () => false, available = true, taken = []} = {}) {
 	const files = new Map();
 	const notified = [];
+	const naming = [];
+	const remembered = [];
 	const notes = {
 		read: async (path) => files.get(path)?.markdown ?? null,
 		exists: (path) => files.has(path),
@@ -74,10 +76,12 @@ function setup({titles = ["Sourdough starter care", "Feeding schedule"], suggest
 		isTitleFocused: (path) => focused(path),
 		countWords: (markdown) => (markdown.match(/\S+/g) ?? []).length,
 		notifyRenamed: (from, to, undo) => notified.push({from, to, undo}),
+		onNaming: (path, on) => naming.push([path, on]),
+		remember: (path, list, count) => remembered.push({path, titles: list, words: count}),
 		pauseMs: PAUSE,
 	});
 	const write = (path, markdown, frontmatter) => files.set(path, {markdown, frontmatter});
-	return {titler, files, notified, write};
+	return {titler, files, notified, naming, remembered, write};
 }
 
 test("an Untitled note is named once typing pauses with enough words", async () => {
@@ -221,10 +225,51 @@ test("named notes, excluded folders, Excalidraw drawings and an unavailable mode
 	}
 });
 
-test("naming a note on request ignores its name and length", async () => {
+test("naming a note on request ignores its name and the words setting", async () => {
 	const {titler, files, write} = setup();
-	write("Meeting.md", "short");
-	assert.strictEqual(await titler.nameNow("Meeting.md"), "Sourdough starter care.md");
+	write("Meeting.md", words(8));
+	assert.deepStrictEqual(await titler.nameNow("Meeting.md"), {ok: true, path: "Sourdough starter care.md"});
 	assert.ok(files.has("Sourdough starter care.md"));
+	titler.dispose();
+});
+
+test("a note with next to no text isn't named on request, and the AI isn't asked", async () => {
+	let asked = 0;
+	const {titler, files, write} = setup({suggest: async () => (asked++, ["Garbage"])});
+	write("Untitled.md", "");
+	assert.deepStrictEqual(await titler.nameNow("Untitled.md"), {ok: false, skip: "too-short"});
+	write("Untitled.md", "two words");
+	assert.deepStrictEqual(await titler.nameNow("Untitled.md"), {ok: false, skip: "too-short"});
+	assert.deepStrictEqual(await titler.nameNow("Gone.md"), {ok: false, skip: "missing"});
+	assert.strictEqual(asked, 0);
+	assert.ok(files.has("Untitled.md"));
+	titler.dispose();
+});
+
+test("thinking of a name is announced under the path it started at, before the rename", async () => {
+	const {titler, naming, notified, write} = setup();
+	write("Untitled.md", words(40));
+	await titler.nameNow("Untitled.md");
+	assert.deepStrictEqual(naming, [["Untitled.md", true], ["Untitled.md", false]]);
+	assert.strictEqual(notified.length, 1);
+	titler.dispose();
+});
+
+test("every title the AI came up with is remembered, also when the note isn't named after all", async () => {
+	let focused = false;
+	const titles = ["Sourdough starter care", "Feeding schedule", "Rye flour"];
+	// The user starts editing the title while the AI thinks.
+	const suggest = async () => {
+		focused = true;
+		return titles;
+	};
+	const {titler, files, remembered, write} = setup({focused: () => focused, suggest});
+	write("Untitled.md", "");
+	await titler.seen("Untitled.md");
+	write("Untitled.md", words(40));
+	titler.edited("Untitled.md");
+	await clock.advance(PAUSE);
+	assert.ok(files.has("Untitled.md"), "postponed");
+	assert.deepStrictEqual(remembered, [{path: "Untitled.md", titles: ["Sourdough starter care", "Feeding schedule", "Rye flour"], words: 40}]);
 	titler.dispose();
 });

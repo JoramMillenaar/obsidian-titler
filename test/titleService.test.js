@@ -115,3 +115,37 @@ test("a request that joins late gets the titles streamed so far", async () => {
 	await Promise.all([first, second]);
 	assert.strictEqual(updates.at(-1).length, 3);
 });
+
+test("a note with next to no text gets no titles, without asking the model", async () => {
+	const engine = fakeEngine();
+	const titles = service(engine);
+	for (const markdown of ["", "---\ntags: [a, b, c, d, e, f]\ncreated: 2024-01-01\n---\n", "```\nconst a = b + c + d + e;\n```", "https://example.com/some/long/page", "Two words"]) {
+		assert.deepStrictEqual(await titles.suggest({markdown, currentName: "Untitled", format: FORMAT, lane: "interactive"}), [], JSON.stringify(markdown));
+	}
+	assert.strictEqual(engine.calls.length, 0);
+});
+
+test("asking for more avoids the titles shown, and isn't answered from the cache", async () => {
+	const engine = fakeEngine();
+	const titles = service(engine);
+	const avoid = ["Sourdough starter feeding", "Rye starter rise time"];
+	const first = titles.suggest({markdown: NOTE, currentName: "Untitled", format: FORMAT, lane: "interactive", avoid});
+	await tick();
+	assert.strictEqual(engine.calls[0].request.params.sample, true);
+	assert.match(engine.calls[0].request.messages[0].content, /Sourdough starter feeding; Rye starter rise time/);
+	engine.calls[0].finish("1. Sourdough starter feeding\n2. Saturday bake plan\n3. Hydration notes");
+	assert.deepStrictEqual(await first, ["Saturday bake plan", "Hydration notes"]);
+
+	const again = titles.suggest({markdown: NOTE, currentName: "Untitled", format: FORMAT, lane: "interactive", avoid});
+	await tick();
+	assert.strictEqual(engine.calls.length, 2, "asked the model again");
+	engine.calls[1].finish();
+	await again;
+
+	const plain = titles.suggest({markdown: NOTE, currentName: "Untitled", format: FORMAT, lane: "interactive"});
+	await tick();
+	assert.strictEqual(engine.calls.length, 3, "a plain request isn't answered with a sampled reply");
+	assert.strictEqual(engine.calls[2].request.params.sample, false);
+	engine.calls[2].finish();
+	await plain;
+});

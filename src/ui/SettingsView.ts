@@ -1,17 +1,12 @@
 import { App, Notice, Plugin, PluginSettingTab, SettingDefinitionItem } from "obsidian";
 import { AppContainer } from "../appContainer";
-import { MAX_UNLOAD_AFTER_SECONDS, REPO_URL, TITLE_CASINGS, TITLE_LENGTHS, TITLE_STYLES } from "../constants";
+import { MAX_UNLOAD_AFTER_SECONDS, MIN_TITLE_WORDS, REPO_URL, TITLE_CASINGS, TITLE_LENGTHS, TITLE_STYLES } from "../constants";
 import { TitleStyle, TitlerSettings } from "../types";
 import { feedbackIssueUrl, FeedbackKind } from "../core/feedback";
 import { formatBytes, settingsStatusText } from "../status/modelMessages";
 
-/**
- * Keys the declarative controls read and write; the untitled names are a list stored as one line of
- * text, and the unload delay is a device setting.
- */
-type ControlKey = "autoTitle" | "casing" | "length" | "minWords" | "extraUntitledNames" | "advancedOpen" | "unloadAfterSeconds";
-
-const MIN_WORDS_FLOOR = 5;
+/** Keys the declarative controls read and write; the unload delay is a device setting. */
+type ControlKey = "autoTitle" | "casing" | "length" | "minWords" | "advancedOpen" | "unloadAfterSeconds";
 
 function styleDescription(style: TitleStyle): string {
 	return `For example: “${TITLE_STYLES[style].example}”.`;
@@ -151,14 +146,9 @@ export class SettingsView extends PluginSettingTab {
 						control: {
 							type: "number",
 							key: "minWords",
-							min: MIN_WORDS_FLOOR,
-							validate: (value) => (value < MIN_WORDS_FLOOR ? `Use at least ${MIN_WORDS_FLOOR} words.` : undefined),
+							min: MIN_TITLE_WORDS,
+							validate: (value) => (value < MIN_TITLE_WORDS ? `Use at least ${MIN_TITLE_WORDS} words.` : undefined),
 						},
-					},
-					{
-						name: "Other names that count as untitled",
-						desc: "Notes with these names are named automatically too, numbered or not. Separate names with commas. Obsidian's own “Untitled” always counts, in every language.",
-						control: {type: "text", key: "extraUntitledNames", placeholder: "New note, Draft"},
 					},
 					{
 						name: "Delete the downloaded model",
@@ -181,10 +171,9 @@ export class SettingsView extends PluginSettingTab {
 
 	getControlValue(key: string): unknown {
 		const settings = this.container.settingsRepo.get();
-		if (key === "extraUntitledNames") return settings.extraUntitledNames.join(", ");
 		if (key === "advancedOpen") return settings.advancedOpen || this.isModelDisabled();
 		if (key === "unloadAfterSeconds") return this.container.deviceSettingsRepo.get().unloadAfterSeconds;
-		return settings[key as Exclude<ControlKey, "extraUntitledNames" | "unloadAfterSeconds">];
+		return settings[key as Exclude<ControlKey, "unloadAfterSeconds">];
 	}
 
 	async setControlValue(key: string, value: unknown): Promise<void> {
@@ -192,9 +181,7 @@ export class SettingsView extends PluginSettingTab {
 			this.container.setUnloadAfterSeconds(Math.min(MAX_UNLOAD_AFTER_SECONDS, Math.max(0, Math.round(Number(value)))));
 			return;
 		}
-		const patch: Partial<TitlerSettings> = key === "extraUntitledNames"
-			? {extraUntitledNames: String(value).split(",").map((name) => name.trim()).filter(Boolean)}
-			: {[key]: key === "minWords" ? Math.max(MIN_WORDS_FLOOR, Math.round(Number(value))) : value};
+		const patch: Partial<TitlerSettings> = {[key]: key === "minWords" ? Math.max(MIN_TITLE_WORDS, Math.round(Number(value))) : value};
 		await this.container.settingsRepo.updatePartial(patch);
 		if (key === "advancedOpen") this.refreshDomState();
 	}

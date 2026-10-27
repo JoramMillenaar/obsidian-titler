@@ -20,6 +20,8 @@ export default class Titler extends Plugin {
 
 		const titleSuggest = registerTitleSuggest(this, {
 			suggestTitles: (request) => container.titleService.suggest({...request, lane: "interactive"}),
+			recall: (file, words) => container.memory.recall(file.path, words, container.format()),
+			remember: (file, titles, words) => container.memory.add(file.path, titles, words, container.format()),
 			format: () => container.format(),
 			engineStatus: () => container.engine.status(),
 			subscribeEngine: (listener) => container.engine.subscribe(listener),
@@ -54,9 +56,14 @@ export default class Titler extends Plugin {
 						new Notice("The AI is turned off on this device. You can turn it back on in the plugin's settings.");
 						return true;
 					}
-					new Notice("Thinking of a name…", 2000);
-					void container.autoTitler.nameNow(file.path).then((path) => {
-						if (!path) new Notice("Couldn't come up with a name for this note.");
+					// Up while the AI thinks; a note too short to name is told so before it shows.
+					const thinking = new Notice("Thinking of a name…", 0);
+					void container.autoTitler.nameNow(file.path).then((result) => {
+						thinking.hide();
+						if (result.ok) return;
+						new Notice(result.skip === "too-short"
+							? "Write a few more words first: there's nothing to name this note by yet."
+							: "Couldn't come up with a name for this note.");
 					});
 				}
 				return true;
@@ -64,7 +71,7 @@ export default class Titler extends Plugin {
 		});
 
 		this.app.workspace.onLayoutReady(() => {
-			registerTitlingEvents(this, {autoTitler: container.autoTitler, onOnline: () => container.engine.retry()});
+			registerTitlingEvents(this, {autoTitler: container.autoTitler, memory: container.memory, onOnline: () => container.engine.retry()});
 			this.register(initializePlugin(container, isFirstRun));
 		});
 	}

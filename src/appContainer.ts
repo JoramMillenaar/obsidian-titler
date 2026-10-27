@@ -15,12 +15,14 @@ import { deleteModelDownload, isModelDownloaded } from "./generation/modelCache"
 import { modelWorkerScript, startWorker } from "./workerScript";
 import { TitleService } from "./titling/titleService";
 import { AutoTitler } from "./titling/autoTitler";
+import { TitleMemory } from "./titling/titleMemory";
 import { makeUntitledMatcher } from "./core/rules/untitled";
 import { countWords } from "./core/text/words";
 import { toPlainText } from "./core/text/plainText";
 import { Environment } from "./core/feedback";
 import { showRenamedNotice } from "./ui/autoTitleNotice";
 import { showDownloadNotice } from "./ui/downloadNotice";
+import { TitleEffects } from "./ui/titleEffects";
 
 export class AppContainer {
 	readonly status: StatusReporter;
@@ -30,9 +32,11 @@ export class AppContainer {
 	readonly notes: ObsidianNotes;
 	readonly engine: GenerationEngine;
 	readonly titleService: TitleService;
+	readonly memory = new TitleMemory();
 	readonly autoTitler: AutoTitler;
+	readonly titleEffects: TitleEffects;
 
-	private untitledMatcher: {key: string; matches: (basename: string) => boolean} | null = null;
+	private untitledMatcher: ((basename: string) => boolean) | null = null;
 
 	constructor(private readonly plugin: Plugin) {
 		this.status = new ObsidianStatusBar(plugin);
@@ -59,8 +63,10 @@ export class AppContainer {
 
 		this.titleService = new TitleService({
 			engine: this.engine,
-			untitledNames: () => untitledNames(this.settingsRepo.get().extraUntitledNames),
+			untitledNames,
 		});
+
+		this.titleEffects = new TitleEffects(plugin);
 
 		this.autoTitler = new AutoTitler({
 			notes: this.notes,
@@ -77,7 +83,12 @@ export class AppContainer {
 				return file instanceof TFile && isTitleFocused(plugin.app, file);
 			},
 			countWords: (markdown) => countWords(toPlainText(markdown)),
-			notifyRenamed: (_from, to, undo) => showRenamedNotice(to.split("/").pop()?.replace(/\.md$/, "") ?? to, undo),
+			notifyRenamed: (_from, to, undo) => {
+				this.titleEffects.reveal(to);
+				showRenamedNotice(to.split("/").pop()?.replace(/\.md$/, "") ?? to, undo);
+			},
+			onNaming: (path, naming) => this.titleEffects.setNaming(path, naming),
+			remember: (path, titles, words, format) => this.memory.add(path, titles, words, format),
 			pauseMs: AUTO_TITLE_PAUSE_MS,
 		});
 	}
@@ -88,10 +99,9 @@ export class AppContainer {
 	}
 
 	isUntitled(basename: string): boolean {
-		const extra = this.settingsRepo.get().extraUntitledNames;
-		const key = extra.join("\u0000");
-		if (this.untitledMatcher?.key !== key) this.untitledMatcher = {key, matches: makeUntitledMatcher(untitledNames(extra))};
-		return this.untitledMatcher.matches(basename);
+		// Built on first use: Obsidian's language, which leads the list, only changes with a restart.
+		this.untitledMatcher ??= makeUntitledMatcher(untitledNames());
+		return this.untitledMatcher(basename);
 	}
 
 	/** Downloads the model, with a notice that shows progress and can put it off. */
@@ -136,6 +146,7 @@ export class AppContainer {
 
 	shutdown(): void {
 		this.autoTitler.dispose();
+		this.titleEffects.dispose();
 		this.engine.dispose();
 		this.status.clear();
 	}

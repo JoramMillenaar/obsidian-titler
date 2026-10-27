@@ -10,6 +10,8 @@ export type GenerationParams = {
 	maxNewTokens: number;
 	/** Stop as soon as the reply holds this many list items, instead of waiting for the model to end its turn. */
 	stopAfterItems: number;
+	/** Sample with the model's {@link GenerationModelConfig.sampling} instead of always taking the likeliest token. */
+	sample?: boolean;
 };
 
 export type GenerationRequest = {

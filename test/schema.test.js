@@ -6,17 +6,20 @@ const {DEFAULT_DEVICE_SETTINGS, DEFAULT_SETTINGS, MAX_UNLOAD_AFTER_SECONDS} = re
 
 test("missing or broken data gives the defaults", () => {
 	assert.deepStrictEqual(normalizePluginData(undefined), {settings: DEFAULT_SETTINGS});
-	assert.deepStrictEqual(normalizeSettings({casing: "shouty", minWords: -3, modelId: "gpt-9", extraUntitledNames: "x"}), DEFAULT_SETTINGS);
+	assert.deepStrictEqual(normalizeSettings({casing: "shouty", minWords: -3, modelId: "gpt-9"}), DEFAULT_SETTINGS);
 });
 
 test("valid values are kept", () => {
-	const settings = normalizeSettings({casing: "title", length: "short", style: "claim", minWords: 12.4, autoTitle: false, extraUntitledNames: ["Draft", "", 3]});
+	const settings = normalizeSettings({casing: "title", length: "short", style: "claim", minWords: 12.4, autoTitle: false});
 	assert.strictEqual(settings.casing, "title");
 	assert.strictEqual(settings.length, "short");
 	assert.strictEqual(settings.style, "claim");
 	assert.strictEqual(settings.minWords, 12);
 	assert.strictEqual(settings.autoTitle, false);
-	assert.deepStrictEqual(settings.extraUntitledNames, ["Draft"]);
+});
+
+test("settings that are gone are dropped", () => {
+	assert.ok(!("extraUntitledNames" in normalizeSettings({extraUntitledNames: ["Draft"]})));
 });
 
 test("device settings default to enabled on the GPU, unloading after 10 minutes", () => {

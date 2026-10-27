@@ -1,5 +1,6 @@
 import { NotesPort } from "../ports";
 import { TitleFormat } from "../types";
+import { MIN_TITLE_WORDS } from "../constants";
 import { KeyedDebouncer } from "../core/util/debounce";
 import { decideAutoTitle } from "../core/rules/autoTitleEligibility";
 import { chooseName } from "../core/title/filename";
@@ -19,6 +20,10 @@ export type AutoTitlerDeps = {
 	countWords: (markdown: string) => number;
 	/** Tells the user a note was named, offering `undo`. */
 	notifyRenamed: (from: string, to: string, undo: () => Promise<void>) => void;
+	/** The AI started (true) or stopped (false) thinking of a name for the note at `path`. */
+	onNaming?: (path: string, naming: boolean) => void;
+	/** Every title the AI came up with for the note, the one it's named after included, and how long the note was. */
+	remember?: (path: string, titles: string[], words: number, format: TitleFormat) => void;
 	/** How long typing has to pause before the note is named. */
 	pauseMs: number;
 };
@@ -30,6 +35,11 @@ type NoteState = {
 	postponed: boolean;
 	running: AbortController | null;
 };
+
+/** What naming a note on request came to. */
+export type NameNowResult =
+	| {ok: true; path: string}
+	| {ok: false; skip: "missing" | "too-short" | "no-name"};
 
 const basenameOf = (path: string) => (path.split("/").pop() ?? path).replace(/\.md$/i, "");
 const extensionOf = (path: string) => /\.([^./]+)$/.exec(path)?.[1]?.toLowerCase() ?? "";
@@ -97,11 +107,13 @@ export class AutoTitler {
 		this.debouncer.cancel(path);
 	}
 
-	/** Names the note now, whatever its name and length (the user asked); resolves with its new path. */
-	async nameNow(path: string): Promise<string | null> {
+	/** Names the note now, whatever its name (the user asked), as long as it has some text to name it by. */
+	async nameNow(path: string): Promise<NameNowResult> {
 		const markdown = await this.deps.notes.read(path);
-		if (markdown === null) return null;
-		return this.name(path, markdown, () => this.deps.notes.exists(path));
+		if (markdown === null) return {ok: false, skip: "missing"};
+		if (this.deps.countWords(markdown) < MIN_TITLE_WORDS) return {ok: false, skip: "too-short"};
+		const renamed = await this.name(path, markdown, () => this.deps.notes.exists(path));
+		return renamed ? {ok: true, path: renamed} : {ok: false, skip: "no-name"};
 	}
 
 	dispose(): void {
@@ -164,13 +176,19 @@ export class AutoTitler {
 		const controller = new AbortController();
 		state.running = controller;
 		try {
-			const titles = await this.deps.suggest({
-				markdown,
-				currentName: basenameOf(path),
-				format: this.deps.settings().format,
-				signal: controller.signal,
-			});
-			if (controller.signal.aborted || !this.deps.notes.exists(path) || !(await stillWanted())) return null;
+			const format = this.deps.settings().format;
+			let titles: string[];
+			this.deps.onNaming?.(path, true);
+			try {
+				titles = await this.deps.suggest({markdown, currentName: basenameOf(path), format, signal: controller.signal});
+			} finally {
+				// Before the rename below, so it's told under the path it was started with.
+				this.deps.onNaming?.(path, false);
+			}
+			if (controller.signal.aborted || !this.deps.notes.exists(path)) return null;
+			// Kept even when the note isn't named now: they're what the popup offers for it.
+			if (titles.length) this.deps.remember?.(path, titles, this.deps.countWords(markdown), format);
+			if (!(await stillWanted())) return null;
 
 			const name = chooseName(titles, this.deps.notes.takenNames(path), (candidate) => this.deps.notes.isLinkTaken(candidate, path));
 			if (!name) return null;

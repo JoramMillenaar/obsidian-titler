@@ -206,11 +206,13 @@ async function generate(loaded: TransformersModel, request: GenerationRequest, h
 		}
 		return forward(modelInputs);
 	};
+	const sampling = request.params.sample ? config.sampling : null;
 	try {
 		await model.generate({
 			...inputs,
 			max_new_tokens: request.params.maxNewTokens,
-			do_sample: false,
+			do_sample: sampling !== null,
+			...(sampling && {temperature: sampling.temperature, top_p: sampling.topP, top_k: sampling.topK}),
 			repetition_penalty: 1,
 			eos_token_id: loaded.eosTokenIds,
 			stopping_criteria: [stopping],

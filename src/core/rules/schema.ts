@@ -17,7 +17,6 @@ export function normalizeSettings(
 	value: Partial<TitlerSettings> | undefined,
 ): TitlerSettings {
 	const minWords = value?.minWords;
-	const extraUntitledNames = value?.extraUntitledNames;
 
 	return {
 		autoTitle: typeof value?.autoTitle === "boolean"
@@ -29,9 +28,6 @@ export function normalizeSettings(
 		minWords: typeof minWords === "number" && Number.isFinite(minWords) && minWords >= 1
 			? Math.round(minWords)
 			: DEFAULT_SETTINGS.minWords,
-		extraUntitledNames: Array.isArray(extraUntitledNames)
-			? extraUntitledNames.filter((name): name is string => typeof name === "string" && name.trim() !== "")
-			: DEFAULT_SETTINGS.extraUntitledNames,
 		advancedOpen: typeof value?.advancedOpen === "boolean"
 			? value.advancedOpen
 			: DEFAULT_SETTINGS.advancedOpen,

@@ -1,8 +1,9 @@
 import { TitleFormat } from "../types";
-import { MAX_PROMPT_CHARS } from "../constants";
+import { MAX_PROMPT_CHARS, MIN_TITLE_WORDS } from "../constants";
 import { LruCache } from "../core/util/lru";
 import { hashText } from "../core/text/hash";
 import { toPlainText } from "../core/text/plainText";
+import { countWords } from "../core/text/words";
 import { createListStream, parseList } from "../core/title/parse";
 import { finalizeTitles } from "../core/title/postprocess";
 import { buildTitleRequest } from "../core/title/request";
@@ -26,6 +27,11 @@ export type SuggestTitlesRequest = {
 	signal?: AbortSignal;
 	/** Called with the titles so far each time the list grows, as the reply streams in. */
 	onTitles?: (titles: string[]) => void;
+	/**
+	 * Asking for more: the titles already offered, which the reply mustn't repeat. The reply is
+	 * sampled rather than the model's single likeliest one, so asking again gives new titles.
+	 */
+	avoid?: string[];
 };
 
 type InFlight = {
@@ -51,7 +57,8 @@ export function noteTextFor(markdown: string, currentName: string): string {
 /**
  * Turns notes into title suggestions. Replies are cached by model, format and note text, so the
  * popup reopening, or the auto-title that follows it, costs nothing; identical requests that
- * overlap share one generation, which stops only when every one of them has given up on it.
+ * overlap share one generation, which stops only when every one of them has given up on it. A
+ * note with next to no text gets no titles: the model would only make something up.
  */
 export class TitleService {
 	private readonly cache = new LruCache<string, string[]>(CACHED_REPLIES);
@@ -64,13 +71,17 @@ export class TitleService {
 	async suggest(request: SuggestTitlesRequest): Promise<string[]> {
 		if (request.signal?.aborted) throw cancelled();
 		const text = noteTextFor(request.markdown, request.currentName);
+		if (countWords(text) < MIN_TITLE_WORDS) return [];
+		const avoid = request.avoid ?? [];
 		const finalize = (items: string[]) => finalizeTitles(items, {
 			format: request.format,
 			sourceText: text,
-			exclude: [request.currentName, ...this.deps.untitledNames()],
+			exclude: [request.currentName, ...this.deps.untitledNames(), ...avoid],
 		});
 
-		const key = hashText([this.deps.engine.config().id, request.format.casing, request.format.length, request.format.style, text].join("\u0000"));
+		const {casing, length, style} = request.format;
+		const more = request.avoid ? ["more", ...avoid] : [];
+		const key = hashText([this.deps.engine.config().id, casing, length, style, text, ...more].join("\u0000"));
 		const cached = this.cache.get(key);
 		if (cached) {
 			const titles = finalize(cached);
@@ -123,7 +134,7 @@ export class TitleService {
 		const stream = createListStream();
 		const flight: InFlight = {controller, waiting: 0, items: [], listeners: new Set(), done: Promise.resolve([])};
 
-		flight.done = this.deps.engine.generate(buildTitleRequest(request.format, text), {
+		flight.done = this.deps.engine.generate(buildTitleRequest(request.format, text, request.avoid), {
 			lane: request.lane,
 			signal: controller.signal,
 			onDelta: (delta) => {
@@ -134,7 +145,8 @@ export class TitleService {
 		}).then((result) => {
 			// The whole reply is the source of truth; the stream only fed the early updates.
 			const items = parseList(result.text);
-			this.cache.set(key, items);
+			// Asking for more again should give new titles, not this sampled reply a second time.
+			if (!request.avoid) this.cache.set(key, items);
 			return items;
 		}).finally(() => {
 			this.inFlight.delete(key);

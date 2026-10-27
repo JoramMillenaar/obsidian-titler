@@ -4,7 +4,12 @@ Titles for your Obsidian notes, written by a small AI that runs entirely on your
 
 - **Suggestions when you select a title.** Click a note's title (or run **Suggest titles for this
   note**) and three suggestions appear under it, next to one taken from the note's first heading or
-  line. Pick one to rename the note; links to it are updated as with any rename.
+  line. Pick one to rename the note; links to it are updated as with any rename. Select
+  **Generate more titles** for different ones. Use the arrow keys to move through them, Enter to
+  rename the note, or Tab to put a suggestion in the title and edit it first.
+- **Suggestions are kept.** The titles the AI came up with for a note, including the ones an
+  automatic name passed over, show up again instantly the next time you open its suggestions,
+  until the note has about doubled in length.
 - **Untitled notes name themselves.** Once you've written a few sentences in an "Untitled" note,
   it gets a title when you pause typing or switch to another note. Each rename can be undone from
   the notice that announces it, and a note you undo is left alone after that.
@@ -20,7 +25,7 @@ Titles for your Obsidian notes, written by a small AI that runs entirely on your
 
 Under **Advanced** you can turn the AI off on one device, choose how long the model stays in
 memory after use on that device, change how much you need to have written before a note is
-named, add names of your own that count as untitled, and delete the downloaded model.
+named, and delete the downloaded model.
 
 ## Privacy and network use
 

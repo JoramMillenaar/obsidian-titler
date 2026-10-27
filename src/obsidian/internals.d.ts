@@ -10,6 +10,18 @@ declare module "obsidian" {
 		plugins?: {plugins?: Record<string, {settings?: Record<string, unknown>} | undefined>};
 	}
 
+	interface AbstractInputSuggest<T> {
+		/**
+		 * The popup's rows. Obsidian also calls its owner's `onSelectedChange(value, evt)` when the
+		 * highlight moves, with a null `evt` when the list was drawn.
+		 */
+		suggestions?: {
+			values: T[];
+			setSelectedItem(index: number, evt: MouseEvent | KeyboardEvent | null): void;
+			getSelectedElement?(): HTMLElement | null;
+		};
+	}
+
 	interface MarkdownView {
 		/** The editable title above the note ("Show inline title" in Appearance settings). */
 		inlineTitleEl?: HTMLElement;

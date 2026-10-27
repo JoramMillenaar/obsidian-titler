@@ -35,17 +35,14 @@ export function registerTitleSuggest(plugin: Plugin, deps: RegisterTitleSuggestD
 			suggest.end();
 			if (file) deps.onTitleBlur?.(file);
 		};
-		const onKeyDown = (evt: KeyboardEvent) => suggest.noteKey(evt);
 		el.addEventListener("focus", onFocus);
 		el.addEventListener("blur", onBlur);
-		el.addEventListener("keydown", onKeyDown, {capture: true});
 		attached.set(el, {
 			suggest,
 			el,
 			detach: () => {
 				el.removeEventListener("focus", onFocus);
 				el.removeEventListener("blur", onBlur);
-				el.removeEventListener("keydown", onKeyDown, {capture: true});
 				suggest.dispose();
 			},
 		});

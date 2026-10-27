@@ -28,6 +28,8 @@ export type PromptOptions = {
 	count?: number;
 	/** Name of the note's language, when known, to keep small models from answering in English. */
 	languageHint?: string;
+	/** Titles offered already, which the reply should not repeat. */
+	avoid?: string[];
 };
 
 export function systemPrompt(format: TitleFormat, options: PromptOptions = {}): string {
@@ -43,6 +45,7 @@ export function systemPrompt(format: TitleFormat, options: PromptOptions = {}): 
 		language,
 		"Be specific to what this note is about, in your own words rather than a line copied from it.",
 		"No quotes, emojis, hashtags or final punctuation. Reply with the list only.",
+		...(options.avoid?.length ? [`These titles were suggested already, so give different ones: ${options.avoid.join("; ")}.`] : []),
 	].join(" ");
 }
 

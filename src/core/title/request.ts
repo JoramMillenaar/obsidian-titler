@@ -13,11 +13,12 @@ const LANGUAGE_SAMPLE_CHARS = 2000;
 /**
  * The request that asks the model for titles for `noteText` (plain text, see toPlainText). The
  * prompt names the note's language when it can be told, since some models otherwise answer in English.
+ * With `avoid` (asking for more), it lists the titles offered already and the reply is sampled.
  */
-export function buildTitleRequest(format: TitleFormat, noteText: string): GenerationRequest {
+export function buildTitleRequest(format: TitleFormat, noteText: string, avoid?: string[]): GenerationRequest {
 	return {
-		messages: buildTitleMessages(format, {languageHint: detectLanguage(noteText.slice(0, LANGUAGE_SAMPLE_CHARS))?.name}),
+		messages: buildTitleMessages(format, {languageHint: detectLanguage(noteText.slice(0, LANGUAGE_SAMPLE_CHARS))?.name, avoid}),
 		note: {marker: NOTE_MARKER, text: noteText},
-		params: {maxNewTokens: maxNewTokens(format), stopAfterItems: TITLE_COUNT},
+		params: {maxNewTokens: maxNewTokens(format), stopAfterItems: TITLE_COUNT, sample: avoid !== undefined},
 	};
 }

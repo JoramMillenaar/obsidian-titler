@@ -22,6 +22,12 @@ export const MAX_UNLOAD_AFTER_SECONDS = 24 * 60 * 60;
 /** How many titles one generation asks for. */
 export const TITLE_COUNT = 3;
 
+/**
+ * Words of actual text (frontmatter, code, links and embeds don't count) a note needs before titles
+ * are suggested for it: with fewer, the model has nothing to go on and makes something up.
+ */
+export const MIN_TITLE_WORDS = 5;
+
 /** The note text is cut to this many characters before the worker cuts it to the model's token budget. */
 export const MAX_PROMPT_CHARS = 6000;
 
@@ -48,6 +54,8 @@ export const GENERATION_MODELS: Record<GenerationModelId, GenerationModelConfig>
 		chatTemplateKwargs: {enable_thinking: false},
 		stopTokens: ["<|im_end|>"],
 		maxInputTokens: 1200,
+		// Qwen's recommended settings for answering without thinking.
+		sampling: {temperature: 0.7, topP: 0.8, topK: 20},
 	},
 };
 
@@ -82,7 +90,6 @@ export const DEFAULT_SETTINGS: TitlerSettings = {
 	length: "medium",
 	style: "topic",
 	minWords: 30,
-	extraUntitledNames: [],
 	advancedOpen: false,
 	modelId: DEFAULT_MODEL_ID,
 };

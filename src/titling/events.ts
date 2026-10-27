@@ -1,12 +1,13 @@
 import { Plugin, TFile } from "obsidian";
 import { AutoTitler } from "./autoTitler";
+import { TitleMemory } from "./titleMemory";
 
 /**
  * Feeds the auto-titler what happens in the workspace: which note is open (and which was just
- * left), local edits, and renames and deletions. Only `editor-change` counts as typing, so notes
- * that change through sync never trigger anything here.
+ * left), local edits, and renames and deletions, which the remembered titles follow too. Only
+ * `editor-change` counts as typing, so notes that change through sync never trigger anything here.
  */
-export function registerTitlingEvents(plugin: Plugin, deps: {autoTitler: AutoTitler; onOnline: () => void}): void {
+export function registerTitlingEvents(plugin: Plugin, deps: {autoTitler: AutoTitler; memory: TitleMemory; onOnline: () => void}): void {
 	const {workspace, vault} = plugin.app;
 	let active: string | null = workspace.getActiveFile()?.path ?? null;
 	if (active) void deps.autoTitler.seen(active);
@@ -25,8 +26,12 @@ export function registerTitlingEvents(plugin: Plugin, deps: {autoTitler: AutoTit
 	}));
 	plugin.registerEvent(vault.on("rename", (file, oldPath) => {
 		deps.autoTitler.renamed(oldPath, file.path);
+		deps.memory.renamed(oldPath, file.path);
 		if (active === oldPath) active = file.path;
 	}));
-	plugin.registerEvent(vault.on("delete", (file) => deps.autoTitler.deleted(file.path)));
+	plugin.registerEvent(vault.on("delete", (file) => {
+		deps.autoTitler.deleted(file.path);
+		deps.memory.deleted(file.path);
+	}));
 	plugin.registerDomEvent(window, "online", deps.onOnline);
 }

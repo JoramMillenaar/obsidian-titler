@@ -16,6 +16,17 @@ test("a language hint names the language", () => {
 	assert.match(systemPrompt({casing: "sentence", length: "long", style: "topic"}, {languageHint: "Dutch"}), /in Dutch/);
 });
 
+test("asking for more lists the titles to avoid, and samples the reply", () => {
+	const {buildTitleRequest} = require("../dist/core/title/request.js");
+	const format = {casing: "sentence", length: "medium", style: "topic"};
+	const more = buildTitleRequest(format, "Notes about feeding a sourdough starter", ["Starter feeding", "Rye flour ratios"]);
+	assert.match(more.messages[0].content, /suggested already, so give different ones: Starter feeding; Rye flour ratios\./);
+	assert.strictEqual(more.params.sample, true);
+	const first = buildTitleRequest(format, "Notes about feeding a sourdough starter");
+	assert.doesNotMatch(first.messages[0].content, /suggested already/);
+	assert.strictEqual(first.params.sample, false);
+});
+
 test("the note goes in the user message at the marker", () => {
 	const messages = buildTitleMessages({casing: "sentence", length: "medium", style: "claim"});
 	assert.deepStrictEqual(messages.map((message) => message.role), ["system", "user"]);

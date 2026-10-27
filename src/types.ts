@@ -41,6 +41,8 @@ export type GenerationModelConfig = {
 	stopTokens: string[];
 	/** The note is cut to this many tokens before it goes into the prompt. */
 	maxInputTokens: number;
+	/** How to sample when asked for different titles than before; otherwise generation is greedy. */
+	sampling: {temperature: number; topP: number; topK: number};
 };
 
 export interface TitlerSettings {
@@ -50,8 +52,6 @@ export interface TitlerSettings {
 	style: TitleStyle;
 	/** Words a note needs before it is named automatically. */
 	minWords: number;
-	/** Names besides Obsidian's own "Untitled" that count as not named yet. */
-	extraUntitledNames: string[];
 	advancedOpen: boolean;
 	/** Not shown in settings: kept so the model can change in a later version without a migration. */
 	modelId: GenerationModelId;
