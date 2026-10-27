@@ -1,7 +1,7 @@
 # Titler
 Suggest titles for you notes automatically, all on-device.
 
-<img width="994" height="812" alt="thumbnail" src="https://github.com/user-attachments/assets/baa165eb-3a04-41be-b262-3332951b62e7" />
+![thumbnail](assets/thumbnail.png)
 
 
 ## Privacy and network use
