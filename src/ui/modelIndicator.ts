@@ -17,8 +17,8 @@ const INDETERMINATE_ARC = 25;
 const MENU_TICK_MS = 1000;
 
 /**
- * A small icon in the status bar while the AI model is in memory: sparkles shimmering pink once
- * it's loaded, a ring filling up while it loads. Selecting it opens a menu about the model, counting
+ * A small icon in the status bar while the AI model is in memory: sparkles shimmering in the accent
+ * color once it's loaded, a ring filling up while it loads. Selecting it opens a menu about the model, counting
  * down to when it unloads by itself, with a way to take it down now. Hidden while the model isn't in memory.
  */
 export function registerModelIndicator(plugin: Plugin, deps: ModelIndicatorDeps): void {
