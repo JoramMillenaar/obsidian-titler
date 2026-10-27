@@ -16,15 +16,22 @@ test("a language hint names the language", () => {
 	assert.match(systemPrompt({casing: "sentence", length: "long", style: "topic"}, {languageHint: "Dutch"}), /in Dutch/);
 });
 
-test("asking for more lists the titles to avoid, and samples the reply", () => {
+test("asking for more lists the titles to avoid, asks for a few extra, and samples the reply", () => {
 	const {buildTitleRequest} = require("../dist/core/title/request.js");
 	const format = {casing: "sentence", length: "medium", style: "topic"};
-	const more = buildTitleRequest(format, "Notes about feeding a sourdough starter", ["Starter feeding", "Rye flour ratios"]);
+	const first = buildTitleRequest(format, "Notes about feeding a sourdough starter", {exclude: ["Untitled"]});
+	const more = buildTitleRequest(format, "Notes about feeding a sourdough starter", {avoid: ["Starter feeding", "Rye flour ratios"], exclude: ["Untitled"]});
 	assert.match(more.messages[0].content, /suggested already, so give different ones: Starter feeding; Rye flour ratios\./);
+	assert.match(more.messages[0].content, /exactly 5 different titles/);
 	assert.strictEqual(more.params.sample, true);
-	const first = buildTitleRequest(format, "Notes about feeding a sourdough starter");
+	assert.strictEqual(more.params.stopAfterItems, 3, "still stops at three new ones");
+	assert.ok(more.params.maxNewTokens > first.params.maxNewTokens, "room for the extra titles");
+	assert.deepStrictEqual(more.params.countTitles, {format, exclude: ["Untitled", "Starter feeding", "Rye flour ratios"]});
+
 	assert.doesNotMatch(first.messages[0].content, /suggested already/);
+	assert.match(first.messages[0].content, /exactly 3 different titles/);
 	assert.strictEqual(first.params.sample, false);
+	assert.deepStrictEqual(first.params.countTitles, {format, exclude: ["Untitled"]});
 });
 
 test("the note goes in the user message at the marker", () => {

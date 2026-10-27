@@ -4,6 +4,8 @@ import { initializePlugin } from "./app/initializePlugin";
 import { registerTitleSuggest } from "./ui/registerTitleSuggest";
 import { SettingsView } from "./ui/SettingsView";
 import { registerTitlingEvents } from "./titling/events";
+import { PickUndo } from "./ui/pickUndo";
+import { registerModelIndicator } from "./ui/modelIndicator";
 
 export default class Titler extends Plugin {
 	private appContainer!: AppContainer;
@@ -18,6 +20,12 @@ export default class Titler extends Plugin {
 
 		this.addSettingTab(new SettingsView(this.app, this, container));
 
+		const pickUndo = new PickUndo(this, {
+			rename: (path, basename) => container.notes.rename(path, basename),
+			takenNames: (path) => container.notes.takenNames(path),
+			onUndone: (path) => container.titleEffects.reveal(path),
+		});
+
 		const titleSuggest = registerTitleSuggest(this, {
 			suggestTitles: (request) => container.titleService.suggest({...request, lane: "interactive"}),
 			recall: (file, words) => container.memory.recall(file.path, words, container.format()),
@@ -31,6 +39,9 @@ export default class Titler extends Plugin {
 			retry: () => container.engine.retry(),
 			takenNames: (file) => container.notes.takenNames(file.path),
 			prewarm: () => void container.engine.prewarm(),
+			onPicked: (file, from, to) => pickUndo.picked(file, from, to),
+			// Back in a title, Mod+Z is its own undo again.
+			onTitleFocus: () => pickUndo.forget(),
 			onTitleBlur: (file) => container.autoTitler.titleBlurred(file.path),
 		});
 
@@ -67,6 +78,29 @@ export default class Titler extends Plugin {
 					});
 				}
 				return true;
+			},
+		});
+
+		registerModelIndicator(this, {
+			status: () => container.engine.status(),
+			subscribe: (listener) => container.engine.subscribe(listener),
+			details: () => {
+				const config = container.engine.config();
+				const status = container.engine.status();
+				const dtype = status.kind === "ready" ? status.dtype : config.dtype.webgpu;
+				const unloadsAt = container.engine.unloadsAt();
+				return {
+					label: config.label,
+					license: config.license,
+					languages: config.languages,
+					downloadBytes: config.downloadBytes[dtype] ?? config.downloadBytes[config.dtype.webgpu] ?? 0,
+					unloadAfterSeconds: container.deviceSettingsRepo.get().unloadAfterSeconds,
+					unloadsInMs: unloadsAt === null ? null : unloadsAt - Date.now(),
+				};
+			},
+			unload: () => {
+				container.engine.unload();
+				container.status.update("AI model unloaded.", 3000);
 			},
 		});
 

@@ -23,6 +23,12 @@ export const MAX_UNLOAD_AFTER_SECONDS = 24 * 60 * 60;
 export const TITLE_COUNT = 3;
 
 /**
+ * How many titles asking for more asks for: some repeat ones already shown, so a few extra, and
+ * the reply stops once TITLE_COUNT new ones are in.
+ */
+export const MORE_TITLE_COUNT = 5;
+
+/**
  * Words of actual text (frontmatter, code, links and embeds don't count) a note needs before titles
  * are suggested for it: with fewer, the model has nothing to go on and makes something up.
  */
@@ -102,7 +108,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
 
 export const DEVICE_SETTINGS_STORAGE_KEY = "titler:device-settings";
 
-export const REPO_URL = "https://github.com/JoramMillenaar/obsidian-title-suggest";
+export const REPO_URL = "https://github.com/JoramMillenaar/obsidian-titler";
 
 /** How long typing has to pause before an Untitled note is named. */
 export const AUTO_TITLE_PAUSE_MS = 5000;

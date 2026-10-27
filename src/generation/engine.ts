@@ -39,6 +39,8 @@ export type GenerationEngineDeps = {
 	idleMs: () => number;
 	/** Called when WebGPU output looked broken twice in a row: the caller decides whether to switch to WASM. */
 	onUnusableGpuOutput?: () => void;
+	/** The clock {@link GenerationEngine.unloadsAt} reads, in milliseconds; `Date.now` unless a test passes its own. */
+	now?: () => number;
 };
 
 type Loading = {
@@ -106,6 +108,8 @@ export class GenerationEngine {
 	private state: State = {kind: "unloaded"};
 	private leases = 0;
 	private idleTimer: number | null = null;
+	/** When {@link idleTimer} fires, on the deps' clock. */
+	private idleDeadline: number | null = null;
 	private requestIdCounter = 0;
 	private unusableStrikes = 0;
 	private disposed = false;
@@ -177,6 +181,14 @@ export class GenerationEngine {
 		this.acquire().release();
 	}
 
+	/**
+	 * When the model unloads by itself if nothing uses it before then, on the deps' clock: null while
+	 * it's in use, or not in memory.
+	 */
+	unloadsAt(): number | null {
+		return this.state.kind === "ready" ? this.idleDeadline : null;
+	}
+
 	/** Restarts the idle countdown if one is running, so a changed idle time applies to the model loaded now. */
 	idleTimeChanged(): void {
 		if (this.idleTimer !== null) this.scheduleTeardown();
@@ -238,6 +250,7 @@ export class GenerationEngine {
 		const state = this.state;
 		if (state.kind !== "loading" && state.kind !== "ready") return;
 		this.stop(state, new Error("The AI model was unloaded."));
+		this.cancelTeardown();
 		this.state = {kind: "unloaded"};
 		this.notify();
 	}
@@ -434,15 +447,19 @@ export class GenerationEngine {
 	private scheduleTeardown(): void {
 		this.cancelTeardown();
 		if (this.disposed) return;
+		const idleMs = this.deps.idleMs();
+		this.idleDeadline = (this.deps.now ?? Date.now)() + idleMs;
 		this.idleTimer = window.setTimeout(() => {
 			this.idleTimer = null;
+			this.idleDeadline = null;
 			this.teardown();
-		}, this.deps.idleMs());
+		}, idleMs);
 	}
 
 	private cancelTeardown(): void {
 		if (this.idleTimer !== null) window.clearTimeout(this.idleTimer);
 		this.idleTimer = null;
+		this.idleDeadline = null;
 	}
 
 	private teardown(): void {

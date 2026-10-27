@@ -134,7 +134,8 @@ export class TitleService {
 		const stream = createListStream();
 		const flight: InFlight = {controller, waiting: 0, items: [], listeners: new Set(), done: Promise.resolve([])};
 
-		flight.done = this.deps.engine.generate(buildTitleRequest(request.format, text, request.avoid), {
+		const exclude = [request.currentName, ...this.deps.untitledNames()];
+		flight.done = this.deps.engine.generate(buildTitleRequest(request.format, text, {avoid: request.avoid, exclude}), {
 			lane: request.lane,
 			signal: controller.signal,
 			onDelta: (delta) => {

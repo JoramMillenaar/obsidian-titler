@@ -35,6 +35,7 @@ function makeClock() {
 			await flushMicrotasks();
 		},
 		flushMicrotasks,
+		now: () => now,
 	};
 }
 
@@ -116,6 +117,7 @@ function makeEngine({behaviour = workingModel, downloaded = true, onUnusableGpuO
 		cacheKey: "test-cache",
 		idleMs,
 		onUnusableGpuOutput,
+		now: clock.now,
 	});
 	return {engine, workers};
 }
@@ -147,6 +149,24 @@ test("the model is unloaded once idle, and the next use loads it again", async (
 
 	await engine.generate(REQUEST, {lane: "background"});
 	assert.strictEqual(workers.length, 2);
+	engine.dispose();
+});
+
+test("the engine tells when an idle model will unload, and that a model in use won't", async () => {
+	const {engine} = makeEngine();
+	assert.strictEqual(engine.unloadsAt(), null, "not loaded");
+	await engine.generate(REQUEST, {lane: "background"});
+	const deadline = clock.now() + IDLE_MS;
+	assert.strictEqual(engine.unloadsAt(), deadline);
+
+	const lease = engine.acquire();
+	assert.strictEqual(engine.unloadsAt(), null, "in use");
+	await clock.advance(1000);
+	lease.release();
+	assert.strictEqual(engine.unloadsAt(), clock.now() + IDLE_MS, "counts again from when it was last used");
+
+	engine.unload();
+	assert.strictEqual(engine.unloadsAt(), null, "unloaded by hand");
 	engine.dispose();
 });
 

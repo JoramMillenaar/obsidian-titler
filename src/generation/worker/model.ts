@@ -11,6 +11,7 @@ import {
 } from "@huggingface/transformers";
 import { ChatMessage, Device, DType, GenerationModelConfig } from "../../types";
 import { createListStream } from "../../core/title/parse";
+import { hasEnoughItems } from "../../core/title/stopping";
 import { GenerationRequest, StopReason } from "../protocol";
 import { Backend, BackendResult, GenerateHooks, LoadedModel } from "./handlers";
 
@@ -184,8 +185,9 @@ async function generate(loaded: TransformersModel, request: GenerationRequest, h
 		callback_function: (piece: string) => {
 			text += piece;
 			hooks.onDelta(piece);
-			list.push(piece);
-			if (list.count >= request.params.stopAfterItems && stoppedBy === null) {
+			// Only a completed line can change the count.
+			const completed = list.push(piece);
+			if (completed.length > 0 && stoppedBy === null && hasEnoughItems(list, request.params, request.note.text)) {
 				stoppedBy = "list-complete";
 				stopping.interrupt();
 			}

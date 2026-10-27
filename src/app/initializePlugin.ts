@@ -18,7 +18,7 @@ export function initializePlugin(app: AppContainer, isFirstRun: boolean): () => 
 			if (downloading && status.kind === "ready") app.status.update("AI model downloaded.", 4000);
 			downloading = false;
 		}
-		const message = statusBarMessage(status, downloading);
+		const message = statusBarMessage(status);
 		if (message) app.status.update(message.text, message.timeout);
 	});
 

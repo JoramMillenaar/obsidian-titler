@@ -154,6 +154,97 @@
 	}
 }
 
+/* The status bar icon while the AI model is in memory */
+.titler-model-indicator {
+	display: flex;
+	align-items: center;
+	--icon-size: var(--icon-xs);
+}
+
+.titler-model-icon {
+	display: flex;
+}
+
+/* Loaded: the sparkles shimmer pink, the big one first, then the small ones */
+.titler-model-indicator.is-ready .titler-model-icon {
+	color: var(--color-pink);
+}
+
+.titler-model-indicator.is-ready .titler-model-icon .svg-icon > * {
+	animation: titler-shimmer-pink 2400ms ease-in-out infinite;
+}
+
+.titler-model-indicator.is-ready .titler-model-icon .svg-icon > :nth-child(2),
+.titler-model-indicator.is-ready .titler-model-icon .svg-icon > :nth-child(3) {
+	animation-delay: 300ms;
+}
+
+.titler-model-indicator.is-ready .titler-model-icon .svg-icon > :nth-child(4) {
+	animation-delay: 600ms;
+}
+
+/* Loading: a ring fills up in place of the icon, or spins when there's no telling how far along */
+.titler-model-ring {
+	display: none;
+	width: var(--icon-xs);
+	height: var(--icon-xs);
+	transform: rotate(-90deg);
+}
+
+.titler-model-indicator.is-loading .titler-model-icon {
+	display: none;
+}
+
+.titler-model-indicator.is-loading .titler-model-ring {
+	display: block;
+}
+
+.titler-model-ring circle {
+	fill: none;
+	stroke-width: 2.5;
+}
+
+.titler-model-ring-track {
+	stroke: var(--background-modifier-border);
+}
+
+.titler-model-ring-arc {
+	stroke: var(--color-pink);
+	stroke-linecap: round;
+	transition: stroke-dasharray 300ms ease-out;
+}
+
+.titler-model-indicator.is-indeterminate .titler-model-ring {
+	animation: titler-spin 1000ms linear infinite;
+}
+
+@keyframes titler-shimmer-pink {
+	0%,
+	100% {
+		color: var(--color-pink);
+	}
+	50% {
+		color: color-mix(in srgb, var(--color-pink) 45%, white);
+		filter: drop-shadow(0 0 1.5px var(--color-pink));
+	}
+}
+
+@keyframes titler-spin {
+	from {
+		transform: rotate(-90deg);
+	}
+	to {
+		transform: rotate(270deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.titler-model-indicator.is-ready .titler-model-icon .svg-icon > *,
+	.titler-model-indicator.is-indeterminate .titler-model-ring {
+		animation: none;
+	}
+}
+
 /* Buttons inside notices (Undo, Not now) */
 .titler-notice-undo,
 .titler-notice-button {

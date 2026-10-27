@@ -6,7 +6,8 @@ Titles for your Obsidian notes, written by a small AI that runs entirely on your
   note**) and three suggestions appear under it, next to one taken from the note's first heading or
   line. Pick one to rename the note; links to it are updated as with any rename. Select
   **Generate more titles** for different ones. Use the arrow keys to move through them, Enter to
-  rename the note, or Tab to put a suggestion in the title and edit it first.
+  rename the note, or Tab to put a suggestion in the title and edit it first. Changed your mind?
+  Press Cmd+Z (Ctrl+Z) right after picking one to get the old name back.
 - **Suggestions are kept.** The titles the AI came up with for a note, including the ones an
   automatic name passed over, show up again instantly the next time you open its suggestions,
   until the note has about doubled in length.
@@ -14,6 +15,10 @@ Titles for your Obsidian notes, written by a small AI that runs entirely on your
   it gets a title when you pause typing or switch to another note. Each rename can be undone from
   the notice that announces it, and a note you undo is left alone after that.
 - **In your note's language.** Titles come out in the language the note is written in.
+- **See when the AI is in memory.** A small sparkles icon shimmers in the status bar while the
+  model is loaded, and a ring fills up in its place while it loads. Select it to see which model
+  is running and where and how long until it unloads by itself, or to unload it and free its
+  memory right away.
 
 ## Settings
 

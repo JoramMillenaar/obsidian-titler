@@ -1,4 +1,4 @@
-import { ChatMessage, Device, DType, GenerationModelConfig } from "../types";
+import { ChatMessage, Device, DType, GenerationModelConfig, TitleFormat } from "../types";
 
 /**
  * Which queue a request waits in. Interactive work (titles for a popup the user is looking at)
@@ -10,6 +10,11 @@ export type GenerationParams = {
 	maxNewTokens: number;
 	/** Stop as soon as the reply holds this many list items, instead of waiting for the model to end its turn. */
 	stopAfterItems: number;
+	/**
+	 * Count only items that make titles in this format other than `exclude`: the ones that will be
+	 * offered. Items that get filtered out (a title already shown, say) then don't end the reply early.
+	 */
+	countTitles?: {format: TitleFormat; exclude: string[]};
 	/** Sample with the model's {@link GenerationModelConfig.sampling} instead of always taking the likeliest token. */
 	sample?: boolean;
 };

@@ -47,6 +47,8 @@ export type TitleSuggestDeps = {
 	retry: () => void;
 	/** Lowercased names of the other notes in `file`'s folder. */
 	takenNames: (file: TFile) => Set<string>;
+	/** The user picked `to` as the name of the note called `from`; Obsidian renames it next. */
+	onPicked?: (file: TFile, from: string, to: string) => void;
 };
 
 /** What one opening of the popup knows: the note as it was, and the titles coming in for it. */
@@ -329,7 +331,7 @@ export class TitleSuggest extends AbstractInputSuggest<Row> {
 		}
 		el.removeClass("is-pending");
 		el.createSpan({cls: "titler-suggestion-title", text: this.available(session, row.title)});
-		el.createSpan({cls: "titler-suggestion-hint", text: row.kind === "heuristic" ? row.hint : "AI"});
+		if (row.kind === "heuristic") el.createSpan({cls: "titler-suggestion-hint", text: row.hint});
 		continueAnimation(el, "is-arriving", "--titler-arrive-delay", row.arrivedAt, ARRIVE_MS);
 	}
 
@@ -404,8 +406,10 @@ export class TitleSuggest extends AbstractInputSuggest<Row> {
 		}
 		if (row.title === null) return; // Still on its way.
 
-		this.setValue(this.available(session, row.title));
+		const name = this.available(session, row.title);
+		this.setValue(name);
 		playReveal(this.titleEl);
+		this.deps.onPicked?.(session.file, session.originalName, name);
 		this.close();
 		// Blur hands the rename to Obsidian's own title handling, which validates it and updates links.
 		this.titleEl.blur();
