@@ -1,4 +1,34 @@
-/* Title suggestions, under a note's editable title */
+/* The plugin's accent: the AI's sparkles, its loading ring, "Generate more titles", the shimmer of text it's working on and the highlighted suggestion */
+body {
+	--titler-accent: var(--interactive-accent);
+}
+
+/* Title suggestions, under a note's editable title: frosted glass, the titles in the title's font */
+.suggestion-container.titler-suggest {
+	background: color-mix(in srgb, var(--background-primary) 65%, transparent);
+	-webkit-backdrop-filter: blur(16px) saturate(1.4);
+	backdrop-filter: blur(16px) saturate(1.4);
+	border: 1px solid color-mix(in srgb, var(--text-normal) 12%, transparent);
+	border-radius: var(--radius-l);
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+.titler-suggest .suggestion-item {
+	padding: var(--size-4-2) var(--size-4-3);
+	border-radius: var(--radius-m);
+}
+
+.titler-suggest .suggestion-item.is-selected {
+	background: color-mix(in srgb, var(--titler-accent) 18%, transparent);
+}
+
+.titler-suggestion:not(.titler-suggestion-action):not(.is-pending) .titler-suggestion-title {
+	font-family: var(--inline-title-font, var(--h1-font));
+	font-weight: var(--inline-title-weight, 700);
+	font-size: 1.15em;
+	letter-spacing: -0.01em;
+}
+
 .titler-suggestion {
 	display: flex;
 	justify-content: space-between;
@@ -23,7 +53,7 @@
 .titler-suggestion-action {
 	justify-content: flex-start;
 	align-items: center;
-	color: var(--text-accent);
+	color: var(--titler-accent);
 }
 
 .titler-suggestion-icon {
@@ -51,7 +81,7 @@
 /* "Thinking…" shimmers while the AI is at it, and so does the title of a note it's naming */
 .titler-suggestion-pending,
 .titler-naming:not(:focus) {
-	background-image: linear-gradient(90deg, currentColor 0 40%, var(--text-accent) 50%, currentColor 60% 100%);
+	background-image: linear-gradient(90deg, currentColor 0 40%, var(--titler-accent) 50%, currentColor 60% 100%);
 	-webkit-background-clip: text;
 	background-clip: text;
 	-webkit-text-fill-color: transparent;
@@ -165,13 +195,13 @@
 	display: flex;
 }
 
-/* Loaded: the sparkles shimmer pink, the big one first, then the small ones */
+/* Loaded: the sparkles shimmer in the accent color, the big one first, then the small ones */
 .titler-model-indicator.is-ready .titler-model-icon {
-	color: var(--color-pink);
+	color: var(--titler-accent);
 }
 
 .titler-model-indicator.is-ready .titler-model-icon .svg-icon > * {
-	animation: titler-shimmer-pink 2400ms ease-in-out infinite;
+	animation: titler-sparkle 2400ms ease-in-out infinite;
 }
 
 .titler-model-indicator.is-ready .titler-model-icon .svg-icon > :nth-child(2),
@@ -209,7 +239,7 @@
 }
 
 .titler-model-ring-arc {
-	stroke: var(--color-pink);
+	stroke: var(--titler-accent);
 	stroke-linecap: round;
 	transition: stroke-dasharray 300ms ease-out;
 }
@@ -218,14 +248,14 @@
 	animation: titler-spin 1000ms linear infinite;
 }
 
-@keyframes titler-shimmer-pink {
+@keyframes titler-sparkle {
 	0%,
 	100% {
-		color: var(--color-pink);
+		color: var(--titler-accent);
 	}
 	50% {
-		color: color-mix(in srgb, var(--color-pink) 45%, white);
-		filter: drop-shadow(0 0 1.5px var(--color-pink));
+		color: color-mix(in srgb, var(--titler-accent) 45%, white);
+		filter: drop-shadow(0 0 1.5px var(--titler-accent));
 	}
 }
 

@@ -22,6 +22,14 @@ declare module "obsidian" {
 		};
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- merging needs the class's own type parameter
+	interface PopoverSuggest<T> {
+		/** The popup. */
+		suggestEl: HTMLElement;
+		/** Places the popup under `rect` (the input's box, in the window). */
+		reposition(rect: {left: number; right: number; top: number; bottom: number}): void;
+	}
+
 	interface MarkdownView {
 		/** The editable title above the note ("Show inline title" in Appearance settings). */
 		inlineTitleEl?: HTMLElement;

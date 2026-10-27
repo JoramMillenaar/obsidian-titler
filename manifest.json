@@ -1,7 +1,7 @@
 {
 	"id": "titler",
 	"name": "Titler",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"minAppVersion": "1.13.0",
 	"description": "Suggests and writes titles for your notes with a small AI that runs fully on your device.",
 	"author": "Joram Millenaar",
