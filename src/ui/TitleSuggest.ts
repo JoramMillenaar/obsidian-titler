@@ -67,6 +67,8 @@ type Session = {
 	unsubscribe: () => void;
 };
 
+type Rect = {left: number; right: number; top: number; bottom: number};
+
 const isTitled = (row: Row): row is Row & {title: string} => row.kind !== "action" && row.title !== null;
 
 /** Plays `cls` on `el` as if it had started at `since` (when that is recent), so drawing a row again doesn't restart it. */
@@ -88,6 +90,22 @@ function placeCaretAtEnd(el: HTMLElement): void {
 	selection.addRange(range);
 }
 
+/** Where the title's text starts (its box is as wide as the view), or null while it has none. */
+function textStart(titleEl: HTMLElement): number | null {
+	const range = titleEl.doc.createRange();
+	range.selectNodeContents(titleEl);
+	const rect = range.getBoundingClientRect();
+	return rect.width > 0 ? rect.left : null;
+}
+
+/** How far into the popup its rows' text starts. */
+function textInset(popupEl: HTMLElement): number {
+	const item = popupEl.querySelector<HTMLElement>(".suggestion-item");
+	if (!item) return 0;
+	const padding = parseFloat(getComputedStyle(item).paddingInlineStart) || 0;
+	return item.getBoundingClientRect().left - popupEl.getBoundingClientRect().left + padding;
+}
+
 /**
  * Title suggestions under a note's editable title. The first row is instant (the note's first
  * heading or line); below it are the AI's titles, the ones it came up with before or new ones
@@ -107,6 +125,7 @@ export class TitleSuggest extends AbstractInputSuggest<Row> {
 		private readonly deps: TitleSuggestDeps,
 	) {
 		super(app, titleEl as HTMLDivElement);
+		this.suggestEl.addClass("titler-suggest");
 		// Few rows either way: "Generate more" stops once the note has its fill of titles.
 		this.limit = 0;
 		this.onSelect((row, evt) => this.choose(row, evt));
@@ -182,12 +201,32 @@ export class TitleSuggest extends AbstractInputSuggest<Row> {
 		session.selected = row ?? null;
 	}
 
+	/**
+	 * Obsidian calls this (private API) to place the popup under the title's box. It spans the
+	 * title, shifted so the suggestions' text starts where the title's does. Left-to-right only.
+	 */
+	reposition(rect: Rect): void {
+		const inset = textInset(this.suggestEl);
+		const left = (textStart(this.titleEl) ?? rect.left) - inset;
+		const width = rect.right - left;
+		this.suggestEl.setCssStyles({width: `${width}px`, maxWidth: "none"});
+		// Not `...rect`: Obsidian passes a DOMRect, whose sides are getters that spreading leaves out.
+		super.reposition({top: rect.top, bottom: rect.bottom, left, right: left + width});
+	}
+
 	protected getSuggestions(query: string): Row[] {
 		const session = this.session;
 		if (this.disposed || !session) return [];
 		// Typing their own title: get out of the way (and out of Enter's way).
 		if (query.trim() !== session.originalName) return [];
-		const rows = session.rows.filter((row) => row.kind !== "model" || row.title !== null || this.pending(session) !== null);
+		const loading = this.deps.engineStatus().kind === "loading";
+		let untitled = 0;
+		const rows = session.rows.filter((row) => {
+			if (row.kind !== "model" || row.title !== null) return true;
+			if (this.pending(session) === null) return false;
+			// While the model loads, one row says so, not one per title to come.
+			return !loading || untitled++ === 0;
+		});
 		const now = performance.now();
 		let entering = 0;
 		for (const row of rows) row.shownAt ??= now + STAGGER_MS * entering++;
@@ -246,8 +285,15 @@ export class TitleSuggest extends AbstractInputSuggest<Row> {
 
 		// Pending rows show what the model is doing (downloading, loading, thinking) as that changes.
 		session.unsubscribe();
-		const unsubscribe = this.deps.subscribeEngine(() => {
+		let loading = this.deps.engineStatus().kind === "loading";
+		const unsubscribe = this.deps.subscribeEngine((status) => {
 			if (this.session !== session) return;
+			// Loaded (or loading again): the list goes between one pending row and one per title.
+			if ((status.kind === "loading") !== loading) {
+				loading = status.kind === "loading";
+				this.refresh(session);
+				return;
+			}
 			for (const row of pending) if (row.kind === "model" && row.title === null) this.paint(row);
 		});
 		session.unsubscribe = unsubscribe;

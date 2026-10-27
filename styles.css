@@ -1,4 +1,29 @@
-/* Title suggestions, under a note's editable title */
+/* Title suggestions, under a note's editable title: frosted glass, the titles in the title's font */
+.suggestion-container.titler-suggest {
+	background: color-mix(in srgb, var(--background-primary) 65%, transparent);
+	-webkit-backdrop-filter: blur(16px) saturate(1.4);
+	backdrop-filter: blur(16px) saturate(1.4);
+	border: 1px solid color-mix(in srgb, var(--text-normal) 12%, transparent);
+	border-radius: var(--radius-l);
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+.titler-suggest .suggestion-item {
+	padding: var(--size-4-2) var(--size-4-3);
+	border-radius: var(--radius-m);
+}
+
+.titler-suggest .suggestion-item.is-selected {
+	background: color-mix(in srgb, var(--interactive-accent) 18%, transparent);
+}
+
+.titler-suggestion:not(.titler-suggestion-action):not(.is-pending) .titler-suggestion-title {
+	font-family: var(--inline-title-font, var(--h1-font));
+	font-weight: var(--inline-title-weight, 700);
+	font-size: 1.15em;
+	letter-spacing: -0.01em;
+}
+
 .titler-suggestion {
 	display: flex;
 	justify-content: space-between;
