@@ -81,7 +81,7 @@ export const TITLE_CASINGS: {id: Casing; label: string}[] = [
 export const TITLE_LENGTHS: Record<TitleLength, {label: string; minWords: number; maxWords: number; maxNewTokens: number}> = {
 	short: {label: "Short (2–4 words)", minWords: 2, maxWords: 4, maxNewTokens: 48},
 	medium: {label: "Medium (4–8 words)", minWords: 4, maxWords: 8, maxNewTokens: 72},
-	long: {label: "Descriptive (up to 12 words)", minWords: 5, maxWords: 12, maxNewTokens: 96},
+	long: {label: "Descriptive (8–12 words)", minWords: 8, maxWords: 12, maxNewTokens: 96},
 };
 
 export const TITLE_STYLES: Record<TitleStyle, {label: string; example: string}> = {

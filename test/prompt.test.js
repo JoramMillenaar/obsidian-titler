@@ -12,6 +12,14 @@ test("the prompt asks for the configured count, style, length and casing", () =>
 	assert.match(prompt, /same language as the note/);
 });
 
+test("long titles ask for a word range, not just a maximum, and no style says short", () => {
+	for (const style of ["topic", "claim", "question"]) {
+		const prompt = systemPrompt({casing: "sentence", length: "long", style});
+		assert.match(prompt, /8 to 12 words/);
+		assert.doesNotMatch(prompt, /at most|\bshort\b/i, style);
+	}
+});
+
 test("a language hint names the language", () => {
 	assert.match(systemPrompt({casing: "sentence", length: "long", style: "topic"}, {languageHint: "Dutch"}), /in Dutch/);
 });

@@ -5,9 +5,10 @@ import { TITLE_COUNT, TITLE_LENGTHS } from "../../constants";
 export const NOTE_MARKER = "{{NOTE}}";
 
 // No example titles here: small models copy an example into their answer for unrelated notes.
+// No "short" either: the length instruction sets that, and small models take "short" over a word count.
 export const STYLE_INSTRUCTIONS: Record<TitleStyle, string> = {
-	topic: "Each title names the note's main topic as a short noun phrase, the way a heading would.",
-	claim: "Each title states the note's main idea or conclusion as a short, specific statement.",
+	topic: "Each title names the note's main topic as a noun phrase, the way a heading would.",
+	claim: "Each title states the note's main idea or conclusion as a specific statement.",
 	question: "Each title is the main question the note answers.",
 };
 
@@ -17,11 +18,11 @@ export const CASING_INSTRUCTIONS: Record<Casing, string> = {
 	lower: "Use lowercase.",
 };
 
+/** Always a range: asked for "at most" a number of words, small models answer with three. */
 export function lengthInstruction(length: TitleLength): string {
 	const {minWords, maxWords} = TITLE_LENGTHS[length];
-	return length === "long"
-		? `Use at most ${maxWords} words per title.`
-		: `Use ${minWords} to ${maxWords} words per title.`;
+	const range = `Use ${minWords} to ${maxWords} words per title.`;
+	return length === "long" ? `${range} Each title is a full, descriptive phrase, not a few keywords.` : range;
 }
 
 export type PromptOptions = {

@@ -98,10 +98,7 @@ export default class Titler extends Plugin {
 					unloadsInMs: unloadsAt === null ? null : unloadsAt - Date.now(),
 				};
 			},
-			unload: () => {
-				container.engine.unload();
-				container.status.update("AI model unloaded.", 3000);
-			},
+			unload: () => container.engine.unload(),
 		});
 
 		this.app.workspace.onLayoutReady(() => {
